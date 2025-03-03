@@ -3,7 +3,7 @@ function removeYouTubeShorts() {
     const shortElements = document.querySelectorAll('ytd-video-renderer');
     shortElements.forEach(element => {
         const href = element.querySelector('a#thumbnail')?.href;
-        if (href && href.includes('/shorts/')) {
+        if (href && href.includes('/shorts')) {
             element.remove();
         }
     });
@@ -24,11 +24,16 @@ function removeYouTubeShorts() {
     const historyShorts = document.querySelectorAll('ytd-video-renderer');
     historyShorts.forEach(element => {
         const href = element.querySelector('a#thumbnail')?.href;
-        if (href && href.includes('/shorts/')) {
+        if (href && href.includes('/shorts')) {
             element.remove();
         }
     });
 
+    // Remove shorts panel from watch page
+    const shortsPanel = document.querySelector('ytd-reel-shelf-renderer h2 span#title');
+    if (shortsPanel?.textContent.trim() === 'Shorts') {
+        shortsPanel.closest('ytd-reel-shelf-renderer').remove();
+    }
 
     // Prevent opening YouTube Shorts URLs
     const shortsRedirect = document.querySelector('a[href*="/shorts/"]');
