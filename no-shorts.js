@@ -19,6 +19,17 @@ function removeYouTubeShorts() {
     if (shortsShelf) {
         shortsShelf.remove();
     }
+
+    // Remove shorts from history page
+    const historyShorts = document.querySelectorAll('ytd-video-renderer');
+    historyShorts.forEach(element => {
+        const href = element.querySelector('a#thumbnail')?.href;
+        if (href && href.includes('/shorts/')) {
+            element.remove();
+        }
+    });
+
+
     // Prevent opening YouTube Shorts URLs
     const shortsRedirect = document.querySelector('a[href*="/shorts/"]');
     if (shortsRedirect) {
