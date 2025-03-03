@@ -43,6 +43,12 @@ function removeYouTubeShorts() {
             e.stopPropagation();
         });
     }
+
+    // Redirect YouTube Shorts URLs to main YouTube page
+    if (window.location.pathname.startsWith('/shorts/')) {
+        window.history.pushState({}, '', 'https://www.youtube.com');
+        window.location.reload();
+    }
 }
 
 
@@ -59,8 +65,14 @@ function removeFacebookReels() {
         reelsSidebar.remove();
     }
 
+    // Redirect Facebook Reels URLs to main Facebook page
+    if (window.location.pathname.startsWith('/reel/')) {
+        window.history.pushState({}, '', 'https://www.facebook.com');
+        window.location.reload();
+    }
+
     // Remove reels button from top navigation
-    const reelsNav = document.querySelector('a[href="/reel/"]')?.parentElement;
+    const reelsNav = document.querySelector('a[href="/reel"]')?.parentElement;
     if (reelsNav) {
         reelsNav.remove();
     }
