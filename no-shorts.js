@@ -79,17 +79,66 @@ function removeFacebookReels() {
 }
 
 
-// Run initially and set up observer for dynamic content
-removeYouTubeShorts();
-removeFacebookReels();
-
-const observer = new MutationObserver(() => {
-    if (window.location.hostname === 'www.youtube.com') {
-        removeYouTubeShorts();
-    } else if (window.location.hostname === 'www.facebook.com') {
-        removeFacebookReels();
+function removeInstagramReels() {
+    // Redirect reels URLs (/reels/..., /reels, legacy /reel/...) to the main Instagram page
+    const path = window.location.pathname;
+    if (path.startsWith('/reels') || path.startsWith('/reel/')) {
+        window.history.pushState({}, '', 'https://www.instagram.com');
+        window.location.reload();
+        return;
     }
-});
+
+    // Redirect a profile's reels tab URL (/<user>/reels/) to the profile itself
+    const profileReels = path.match(/^\/([^/]+)\/reels\/?$/);
+    if (profileReels) {
+        window.history.pushState({}, '', 'https://www.instagram.com/' + profileReels[1] + '/');
+        window.location.reload();
+        return;
+    }
+
+    // Remove reel posts from the feed: their thumbnail anchor links to /reels/<id>
+    // (regular posts link to /p/<id>). closest('article') is the post container.
+    document.querySelectorAll('a[href^="/reels/"], a[href^="/reel/"]').forEach(link => {
+        const post = link.closest('article');
+        if (post) {
+            post.remove();
+        } else if (path.startsWith('/explore')) {
+            // Explore grid: reel tiles are bare anchors with no article wrapper
+            link.remove();
+        }
+    });
+
+    // Remove the reels button from the sidebar navigation
+    const reelsNav = document.querySelector('a[href="/reels/"]')?.parentElement;
+    if (reelsNav) {
+        reelsNav.remove();
+    }
+
+    // Remove the reels tab from profile pages (/<user>/reels/ tab link)
+    const profileReelsTabs = document.querySelectorAll('a[href$="/reels/"]:not([href="/reels/"])');
+    profileReelsTabs.forEach(tab => {
+        tab.remove();
+    });
+}
+
+
+// Dispatch to the right site's cleanup. Facebook and Instagram both use /reel/
+// URLs, so cleanups must never run cross-site (a hostname mismatch would
+// redirect to the wrong site).
+function removeShortFormContent() {
+    if (window.location.hostname.endsWith('youtube.com')) {
+        removeYouTubeShorts();
+    } else if (window.location.hostname.endsWith('facebook.com')) {
+        removeFacebookReels();
+    } else if (window.location.hostname.endsWith('instagram.com')) {
+        removeInstagramReels();
+    }
+}
+
+// Run initially and set up observer for dynamic content
+removeShortFormContent();
+
+const observer = new MutationObserver(removeShortFormContent);
 
 observer.observe(document.body, {
     childList: true,

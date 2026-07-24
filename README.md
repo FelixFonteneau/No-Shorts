@@ -1,6 +1,6 @@
 # No-Shorts
 
-A lightweight Firefox extension that removes short-form video feeds — **YouTube Shorts** and **Facebook Reels** — so you can browse without the infinite-scroll bait.
+A lightweight Firefox extension that removes short-form video feeds — **YouTube Shorts**, **Facebook Reels**, and **Instagram Reels** — so you can browse without the infinite-scroll bait.
 
 No settings, no background processes, no data collection. It's a single content script that hides short-form content and redirects you away from it.
 
@@ -19,7 +19,14 @@ No settings, no background processes, no data collection. It's a single content 
 - Removes the Reels entries from the sidebar and top navigation
 - Redirects any `/reel/...` URL back to the Facebook homepage
 
-Because YouTube and Facebook are single-page apps that load content dynamically, the extension watches the page with a [`MutationObserver`](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) and re-applies the cleanup whenever new content appears.
+**On Instagram** (`*.instagram.com`):
+- Removes reel posts from the home feed
+- Removes the **Reels** button from the sidebar navigation
+- Removes reel tiles from the Explore grid
+- Removes the Reels tab from profile pages, and redirects `/<user>/reels/` to the profile itself
+- Redirects any `/reels/...` (or legacy `/reel/...`) URL back to the Instagram homepage
+
+Because these sites are single-page apps that load content dynamically, the extension watches the page with a [`MutationObserver`](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) and re-applies the cleanup whenever new content appears.
 
 ## Installation
 
@@ -33,19 +40,19 @@ See [INSTALL.md](INSTALL.md) for the full step-by-step guide. The short version:
 
 ## How it works
 
-The entire extension is one content script, [`no-shorts.js`](no-shorts.js), injected into YouTube and Facebook pages. It finds short-form UI elements by their DOM selectors and removes them, and rewrites Shorts/Reels URLs back to each site's homepage.
+The entire extension is one content script, [`no-shorts.js`](no-shorts.js), injected into YouTube, Facebook, and Instagram pages. It finds short-form UI elements by their DOM selectors and removes them, and rewrites Shorts/Reels URLs back to each site's homepage.
 
 For a detailed walkthrough of the code and how to extend it, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Limitations
 
-- **Selector fragility** — YouTube and Facebook change their markup regularly. When they do, some elements may reappear until the selectors are updated. Bug reports and PRs welcome.
+- **Selector fragility** — YouTube, Facebook, and Instagram change their markup regularly. When they do, some elements may reappear until the selectors are updated. Bug reports and PRs welcome.
 - **Manifest V2** — the extension currently targets Manifest V2, which Firefox still supports but is deprecated ecosystem-wide. A Manifest V3 migration is a known TODO.
 - **Desktop layouts** — selectors target the desktop sites (`www.youtube.com`, `www.facebook.com`); mobile web layouts (`m.youtube.com`) are not fully covered.
 
 ## Privacy
 
-No-Shorts collects nothing, stores nothing, and talks to no servers. It runs entirely in your browser and only touches pages on `youtube.com` and `facebook.com`.
+No-Shorts collects nothing, stores nothing, and talks to no servers. It runs entirely in your browser and only touches pages on `youtube.com`, `facebook.com`, and `instagram.com`.
 
 ## License
 

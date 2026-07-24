@@ -10,22 +10,25 @@ No-Shorts/
 ├── no-shorts.js      # The entire extension: one content script
 ├── icons/
 │   └── icon-48.png   # Extension icon
+├── reelInFeed.html   # Reference fixture: captured markup of an Instagram reel post in the feed
 ├── README.md         # User-facing overview
 ├── INSTALL.md        # Install & packaging guide
 └── DEVELOPMENT.md    # This file
 ```
 
-There is no build step, no dependencies, and no background script. `manifest.json` declares a single content script injected into all pages on `*.youtube.com` and `*.facebook.com`.
+There is no build step, no dependencies, and no background script. `manifest.json` declares a single content script injected into all pages on `*.youtube.com`, `*.facebook.com`, and `*.instagram.com`.
 
 ## Architecture
 
 `no-shorts.js` has three parts:
 
-1. **`removeYouTubeShorts()`** — all YouTube-specific removals
-2. **`removeFacebookReels()`** — all Facebook-specific removals
-3. **A `MutationObserver`** — re-runs the appropriate function whenever the DOM changes
+1. **One removal function per site** — `removeYouTubeShorts()`, `removeFacebookReels()`, `removeInstagramReels()`
+2. **`removeShortFormContent()`** — a dispatcher that picks the removal function matching `location.hostname`
+3. **A `MutationObserver`** — re-runs the dispatcher whenever the DOM changes
 
-The observer is the key piece: both sites are single-page apps that render content asynchronously and re-render on in-app navigation, so running the cleanup once at injection time isn't enough. The observer watches `document.body` with `{ childList: true, subtree: true }` and calls the site-appropriate removal function on every mutation batch. All removal functions are therefore written to be **idempotent** — safe to call repeatedly, whether or not their targets exist.
+The observer is the key piece: all three sites are single-page apps that render content asynchronously and re-render on in-app navigation, so running the cleanup once at injection time isn't enough. The observer watches `document.body` with `{ childList: true, subtree: true }` and calls the dispatcher on every mutation batch. All removal functions are therefore written to be **idempotent** — safe to call repeatedly, whether or not their targets exist.
+
+The hostname dispatch is not just an optimization — it's a correctness requirement: Facebook and Instagram both use `/reel/` URL paths, so running a cleanup on the wrong site would redirect the user to the wrong domain.
 
 ### The removal pattern
 
@@ -68,6 +71,23 @@ Notes:
 Notes:
 - Facebook's class names are obfuscated and change constantly, so selectors rely on **`aria-label` attributes and `href` patterns** — the only stable hooks available. `aria-label` values are locale-dependent (`"Reels"` is the English label).
 
+### Instagram (`removeInstagramReels`)
+
+| Target | Selector strategy |
+|---|---|
+| Direct navigation to `/reels/...`, `/reels`, or legacy `/reel/...` | `location.pathname` prefix check → redirect to the homepage |
+| Direct navigation to a profile's Reels tab (`/<user>/reels/`) | Regex `^\/([^/]+)\/reels\/?$` → redirect to the profile (`/<user>/`) |
+| Reel posts in the home feed | Any `a[href^="/reels/"]` or `a[href^="/reel/"]`, then `closest('article')` to remove the whole post |
+| Reel tiles in the Explore grid | Same anchors, but no `article` wrapper exists there — remove the anchor itself (only when on `/explore`) |
+| Sidebar "Reels" nav button | `a[href="/reels/"]`, then `.parentElement` (href-based → locale-independent) |
+| Reels tab on profile pages | `a[href$="/reels/"]:not([href="/reels/"])` — ends-with matches the profile tab, the `:not` excludes the sidebar link |
+
+Notes:
+- Instagram's class names are obfuscated (`x78zum5`-style) exactly like Facebook's — selectors rely entirely on `href` patterns.
+- The discriminator between a reel post and a regular post in the feed: the media thumbnail anchor links to `/reels/<id>/` for reels vs `/p/<id>/` for regular posts. See `reelInFeed.html` for a captured example.
+- Reel posts also contain an `/reels/audio/...` "Original audio" link; it lives inside the same `article`, so the feed loop removes it along with the post.
+- Hrefs in the DOM are relative and carry query params (e.g. `/reels/DYxWuMMpyXb/?hl=en`). Attribute selectors (`[href^=...]`) match the raw attribute value, which is what we want — don't compare against the `element.href` property, which is absolutized.
+
 ### The redirect trick
 
 ```js
@@ -88,9 +108,9 @@ This is the most common maintenance task — YouTube and Facebook change their m
 3. Find a stable hook, in order of preference:
    - **Custom element tag names** (`ytd-…`) on YouTube — most stable
    - **Attributes** like `[is-shorts]`, `aria-label`, or `href` patterns
-   - **Never** obfuscated class names (`.x1n2onr6`-style on Facebook) — they rotate
+   - **Never** obfuscated class names (`.x1n2onr6`-style on Facebook/Instagram) — they rotate
 4. Update the selector in `no-shorts.js`, click **Reload** in `about:debugging`, and refresh the page.
-5. Test on: YouTube homepage, search results, a watch page, the history page, and a direct `/shorts/<id>` URL. For Facebook: the feed, and a direct `/reel/<id>` URL.
+5. Test on: YouTube homepage, search results, a watch page, the history page, and a direct `/shorts/<id>` URL. For Facebook: the feed, and a direct `/reel/<id>` URL. For Instagram: the home feed, the sidebar, the Explore page, a profile page, and direct `/reels/<id>` and `/<user>/reels/` URLs.
 
 Debugging tip: content-script `console.log` output appears in the page's regular devtools console (the script runs in the page context's isolated world).
 
@@ -103,11 +123,10 @@ Debugging tip: content-script `console.log` output appears in the page's regular
    ```
 
 2. Write a `removeNewSiteShorts()` function in `no-shorts.js` following the same idempotent find-and-remove pattern.
-3. Call it once at the bottom of the file and add a hostname branch in the `MutationObserver` callback.
+3. Add a hostname branch for it in `removeShortFormContent()` — never call it unconditionally; URL paths collide across sites (Facebook and Instagram both use `/reel/`), so a cleanup running on the wrong site can redirect to the wrong domain.
 
 ## Known issues / TODOs
 
-- **Hostname checks are exact-match** — the observer only re-runs on `www.youtube.com` / `www.facebook.com`, so other subdomains (e.g. `m.youtube.com`) match the manifest but never get observer-driven cleanup. Comparing with `hostname.endsWith('youtube.com')` would fix this.
 - **No debouncing** — the observer callback runs the full removal pass on every mutation batch. Fine in practice, but a `requestIdleCallback`/debounce wrapper would reduce overhead on busy pages.
 - **Click-blocking only binds one link** — the `a[href*="/shorts/"]` click handler uses `querySelector` (first match only) and can attach duplicate listeners across observer runs. The URL redirect acts as the safety net.
 - **Locale sensitivity** — the `Shorts` heading text and `Reels` aria-label checks assume English UI.

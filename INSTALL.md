@@ -22,7 +22,7 @@ There are two ways to run the extension: a **temporary install** (quick, resets 
 
 4. **Verify it works**
 
-   Open [youtube.com](https://www.youtube.com) — the **Shorts** tab should be gone from the sidebar and no Shorts should appear in the feed. On [facebook.com](https://www.facebook.com), Reels sections should be gone.
+   Open [youtube.com](https://www.youtube.com) — the **Shorts** tab should be gone from the sidebar and no Shorts should appear in the feed. On [facebook.com](https://www.facebook.com), Reels sections should be gone. On [instagram.com](https://www.instagram.com), the **Reels** sidebar button should be gone and no reel posts should appear in the feed.
 
 > ⚠️ Temporary add-ons are unloaded every time Firefox closes. You'll need to repeat step 3 after a restart, or use a packaged install below.
 
@@ -73,5 +73,5 @@ Open `about:addons` (**≡ menu → Add-ons and themes**), find **No-Shorts**, a
 |---|---|
 | Shorts still visible after install | Refresh the tab — content scripts only inject into pages loaded after the extension is active. |
 | Extension gone after restarting Firefox | You used a temporary install; load it again or use a packaged install. |
-| Some Shorts elements reappear | YouTube/Facebook changed their markup; the selectors in `no-shorts.js` need updating — see [DEVELOPMENT.md](DEVELOPMENT.md). |
+| Some Shorts/Reels elements reappear | YouTube/Facebook/Instagram changed their markup; the selectors in `no-shorts.js` need updating — see [DEVELOPMENT.md](DEVELOPMENT.md). |
 | `.xpi` won't install ("could not be verified") | The package isn't signed; use the AMO signing route or Developer Edition. |
